@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -11,7 +12,6 @@ namespace DictionaryProcess
     {
         private static readonly Dictionary<string, string> PascalCaseDictionary = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> TranslateDictionary = new Dictionary<string, string>();
-
         private static readonly Dictionary<string, string> CheckDuplicateCHS = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> CheckDuplicateCommon = new Dictionary<string, string>();
 
@@ -47,20 +47,39 @@ namespace DictionaryProcess
             return MakeItem(pascalCase, Translate(name), comment);
         }
 
-        public static string MakeItem(string key, string val, string comment = "") =>
-            $"<data name=\"{key}\" xml:space=\"preserve\">"
-            + $"<value>{val}</value>"
-            + $"<comment>{comment}</comment>"
-            + "</data>";
+        public static string MakeItem(string key, string val, string comment = "")
+        {
+            return $"<data name=\"{key}\" xml:space=\"preserve\">"
+                   + $"<value>{val}</value>"
+                   + $"<comment>{comment}</comment>"
+                   + "</data>";
+        }
 
         public static string PascalCase(string key)
         {
+            if (string.IsNullOrEmpty(key))
+            {
+                return null;
+            }
             if (PascalCaseDictionary.ContainsKey(key)) return PascalCaseDictionary[key];
             key = key?.Trim("@,?.|\\/".ToCharArray());
             var pascalCase = HttpGet(string.Format("http://localhost/Translator/api/PascalCase?key={0}", key))
                 .Trim('"', '.', '-', '+', ',', '\'', '?')
-                .Replace("'", string.Empty);
-            PascalCaseDictionary.Add(key, pascalCase);
+                .Replace("'", string.Empty)
+                .Replace("(", string.Empty)
+                .Replace(")", string.Empty)
+                .Replace("[", string.Empty)
+                .Replace("]", string.Empty)
+                .Replace("!", string.Empty)
+                .Replace(",", string.Empty)
+                .Replace(".", string.Empty)
+                .Replace("?", string.Empty)
+                .Replace("-", string.Empty)
+                .Replace("+", string.Empty)
+                .Replace("=", string.Empty)
+                .Replace(":", string.Empty)
+                ;
+            if (!PascalCaseDictionary.ContainsKey(key)) PascalCaseDictionary.Add(key, pascalCase);
             return pascalCase;
         }
 
@@ -120,9 +139,10 @@ namespace DictionaryProcess
             }
         }
 
-        public static void Show(IEnumerable<string> chs)
+        public static IEnumerable<string> Show(IEnumerable<string> chs)
         {
             Console.WriteLine(string.Join(Environment.NewLine, chs));
+            return chs;
         }
     }
 }
